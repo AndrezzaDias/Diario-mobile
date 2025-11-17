@@ -1,0 +1,21 @@
+# Arquivos de log e resultados do Robot Framework
+output.xml
+log.html
+report.html
+*.log
+
+# Diretório de resultados
+results/
+pabot_results/
+
+# Arquivos do Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Ambiente virtual
+venv/
+.venv/
+
+# Binário do aplicativo (APK) - Geralmente não é versionado
+app/
