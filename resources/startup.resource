@@ -7,13 +7,15 @@ Resource    screens/turmas.robot
 
 *** Keywords ***
 Iniciar sessão
-    Open Application    http://localhost:4723
-    ...                 platformName=Android    
+    Open Application    http://127.0.0.1:4723
+    ...                 platformName=Android
     ...                 deviceName=Android Emulator
     ...                 automationName=UIAutomator2
-    ...                 app=${CURDIR}/../app/app-release.apk
+    ...                 app=${EXECDIR}/app/app-release.apk
     ...                 udid=emulator-5554
-    ...                 autoGrantPermissions=true  
+    ...                 autoGrantPermissions=true
+    ...                 uiautomator2ServerInstallTimeout=60000
+    ...                 androidInstallTimeout=120000
        
 Finalizar sessão 
     Capture Page Screenshot

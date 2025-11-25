@@ -18,12 +18,12 @@ Acessando a tela minhas turmas
 
 Acessando Frequencia 
     #Acessando a tela de frequencia
-    Wait Until Element Is Visible    xpath=//android.view.ViewGroup[@content-desc="Frequências"]  
-    Click Element                    xpath=//android.widget.TextView[@text=""]
+    Wait Until Element Is Visible    xpath=//android.view.ViewGroup[contains(@content-desc, "Selecione a data")]    5  
+    Click Element                    xpath=//android.view.ViewGroup[contains(@content-desc, "Selecione a data")]
     Wait Until Element Is Visible    xpath=//android.widget.TextView[@text="Selecione a Data"]
     Click Element                    xpath=//android.widget.TextView[@resource-id="undefined.day_2025-11-10.text"]
     
-    Page Should Contain Element      xpath=//android.widget.TextView[@text="Aluno"]
+    Wait Until Element Is Visible    xpath=//android.widget.TextView[@text="Alterar a Frequência"] 
    
 Alterar frequencia
     #Alterando frequencia de Aluno / Ausente 
@@ -33,6 +33,23 @@ Alterar frequencia
     Input Text                       xpath=//android.widget.EditText[@text="Digite a justificativa"]        Não compareceu a aula 
     Click Element                    xpath=//android.view.ViewGroup[@content-desc="Salvar"]
 
+Acessando Avaliação 
+    #Acessando tela de avaliação
+    Wait Until Element Is Visible     xpath=//android.view.ViewGroup[@content-desc="Avaliações"]
+    Click Element                     xpath=//android.view.ViewGroup[@content-desc="Avaliações"]  
+
+    #Selecionando Período
+    [Arguments]        ${Periodo}
+
+    Wait Until Element Is Visible     xpath=//android.view.ViewGroup[@content-desc="Toque para Selecionar"]
+    Click Element                     xpath=//android.view.ViewGroup[@content-desc="Toque para Selecionar"]
+
+    Wait Until Element Is Visible     xpath=//android.widget.TextView[@text="${periodo}"]  
+    Click Element                     xpath=//android.widget.TextView[@text="${periodo}"]   
+
+    Wait Until Element Is Visible     xpath=//android.widget.TextView[@text="${periodo}"]  
+    
+    
 
         
 
