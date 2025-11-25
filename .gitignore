@@ -16,6 +16,3 @@ __pycache__/
 # Ambiente virtual
 venv/
 .venv/
-
-# Binário do aplicativo (APK) - Geralmente não é versionado
-app/
