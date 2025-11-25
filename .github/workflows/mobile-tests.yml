@@ -38,13 +38,20 @@ jobs:
           target: google_apis
           arch: x86_64
           ram-size: 4096M
+          disable-linux-hw-accel: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
+            echo "🚀 Iniciando Appium..."
             appium --base-path /wd/hub --relaxed-security &
-            sleep 20
 
+            echo "⏳ Aguardando Appium iniciar..."
+            sleep 40
+
+            echo "🔌 Verificando dispositivo ADB..."
             adb wait-for-device
             adb devices
 
+            echo "🤖 Executando testes..."
             robot test/
 
       - name: Upload Relatórios Robot Framework
