@@ -11,13 +11,14 @@ Iniciar sessão
     ...                 platformName=Android    
     ...                 deviceName=Android Emulator
     ...                 automationName=UIAutomator2
-    ...                 app=C:\\Diario-mobile\\app\\app-release.apk
+    ...                 app=${CURDIR}/../app/app-release.apk
     ...                 udid=emulator-5554
     ...                 autoGrantPermissions=true  
        
 Finalizar sessão 
     Capture Page Screenshot
     Close Application
+
     
 
 
