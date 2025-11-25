@@ -21,7 +21,7 @@ jobs:
       - name: Instalar Appium 2 + UiAutomator2 compatível
         run: |
           npm install -g appium@2.11.2
-          appium driver install uiautomator2@2.0.0
+          appium driver install uiautomator2@2.36.0
 
       - name: Instalar Python
         uses: actions/setup-python@v5
