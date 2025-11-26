@@ -11,12 +11,11 @@ Iniciar sessão
     ...                 platformName=Android
     ...                 deviceName=Android Emulator
     ...                 automationName=UIAutomator2
-    ...                 app=${EXECDIR}/app/app-release.apk
+    ...                 app=${EXECDIR}/app/DiarioMobile.apk
     ...                 udid=emulator-5554
     ...                 autoGrantPermissions=true
     ...                 uiautomator2ServerInstallTimeout=60000
     ...                 androidInstallTimeout=120000
-       
 Finalizar sessão 
     Capture Page Screenshot
     Close Application

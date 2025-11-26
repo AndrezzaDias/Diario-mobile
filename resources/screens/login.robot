@@ -18,7 +18,7 @@ Logando com sucesso
 Validando tela de login
     [Arguments]        ${nome_escola}
 
-    Wait Until Element Is Visible        xpath=//android.widget.TextView[contains(@text, "${nome_escola}")]     
+    Wait Until Element Is Visible        xpath=//android.widget.TextView[@text="${nome_escola}"]         5     
 
 Selecione a escola
     [Arguments]        ${nome_escola}
