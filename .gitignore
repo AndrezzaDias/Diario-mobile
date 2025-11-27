@@ -1,18 +1,70 @@
-# Arquivos de log e resultados do Robot Framework
-output.xml
+# Robot Framework Results
+results/
 log.html
 report.html
+output.xml
+selenium-screenshot-*.png
+
+# Appium Logs
+appium.log
 *.log
 
-# Diretório de resultados
-results/
-pabot_results/
+# Screenshots
+screenshots/
+*.png
+!docs/*.png
+!.github/*.png
 
-# Arquivos do Python
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
 
-# Ambiente virtual
+# Virtual Environment
 venv/
-.venv/
+ENV/
+env/
+.venv
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Android
+*.apk
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+# Descomente a linha abaixo se quiser commitar o APK
+# !app/DiarioMobile.apk
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/

@@ -2,14 +2,16 @@ name: Mobile Automation CI
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
+  workflow_dispatch:  # Permite execução manual
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30  # Timeout global para o job
+    
     steps:
       - name: Checkout do projeto
         uses: actions/checkout@v4
@@ -17,27 +19,51 @@ jobs:
       - name: Instalar Java
         uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
-          java-version: "17"
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Instalar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20.x"
+          node-version: '20.x'
 
       - name: Instalar Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-          cache: "pip"
+          cache: 'pip'
+
+      - name: Verificar versões instaladas
+        run: |
+          echo "=== Versões Instaladas ==="
+          python --version
+          java -version
+          node --version
+          npm --version
 
       - name: Instalar dependências Python
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip list  # Lista pacotes instalados para debug
 
       - name: Instalar Appium 2 + UiAutomator2
         run: |
           npm install -g appium@2.11.2
           appium driver install uiautomator2@2.36.0
+          appium driver list  # Verifica drivers instalados
+
+      - name: Verificar APK existe
+        run: |
+          if [ ! -f "app/DiarioMobile.apk" ]; then
+            echo "❌ ERRO: APK não encontrado em app/DiarioMobile.apk"
+            echo "Arquivos no diretório app/:"
+            ls -la app/ || echo "Diretório app/ não existe!"
+            exit 1
+          else
+            echo "✅ APK encontrado"
+            ls -lh app/DiarioMobile.apk
+          fi
 
       - name: Configurar e Executar Testes no Emulador
         uses: reactivecircus/android-emulator-runner@v2
@@ -52,43 +78,98 @@ jobs:
           disable-animations: true
           script: |
             #!/bin/bash
-            set -x
-            echo "Iniciando Appium em background..."
-            appium --base-path /wd/hub --relaxed-security --port 4723 > appium.log 2>&1 &
+            set -e  # Para em caso de erro
+            set -x  # Debug mode
+            
+            echo "======================================"
+            echo "Iniciando Appium Server"
+            echo "======================================"
+            
+            # Iniciar Appium em background
+            appium --base-path /wd/hub --relaxed-security --log appium.log --log-level debug > /dev/null 2>&1 &
             APPIUM_PID=$!
             echo "Appium PID: $APPIUM_PID"
-
+            
+            # Aguardar Appium iniciar (com timeout)
             echo "Aguardando Appium iniciar..."
-            sleep 10
-
             COUNTER=0
-            while ! curl -s http://127.0.0.1:4723/wd/hub/status > /dev/null 2>&1
-            do
-              echo "Tentativa $COUNTER - Appium ainda nao esta pronto..."
-              sleep 3
+            MAX_ATTEMPTS=30
+            
+            while [ $COUNTER -lt $MAX_ATTEMPTS ]; do
+              if curl -s http://127.0.0.1:4723/wd/hub/status > /dev/null 2>&1; then
+                echo "✅ Appium iniciou com sucesso!"
+                curl -s http://127.0.0.1:4723/wd/hub/status | python -m json.tool
+                break
+              fi
+              
+              echo "Tentativa $((COUNTER + 1))/$MAX_ATTEMPTS - Aguardando Appium..."
+              sleep 2
               COUNTER=$((COUNTER + 1))
-              if [ $COUNTER -gt 20 ]
-              then
-                echo "ERRO: Appium nao iniciou a tempo!"
-                cat appium.log
+              
+              if [ $COUNTER -eq $MAX_ATTEMPTS ]; then
+                echo "❌ ERRO: Appium não iniciou após $MAX_ATTEMPTS tentativas!"
+                echo "=== Log do Appium ==="
+                cat appium.log 2>/dev/null || echo "Log não disponível"
                 exit 1
               fi
             done
-
-            echo "Appium esta pronto!"
-            curl -s http://127.0.0.1:4723/wd/hub/status
-
-            echo "Verificando dispositivo..."
+            
+            echo "======================================"
+            echo "Verificando Emulador Android"
+            echo "======================================"
+            
+            # Aguardar device estar pronto
             adb wait-for-device
-            adb devices
-
-            echo "Executando testes..."
-            robot --outputdir results test/
+            
+            # Verificar dispositivos conectados
+            echo "Dispositivos conectados:"
+            adb devices -l
+            
+            # Verificar se device está realmente pronto
+            while [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; do
+              echo "Aguardando boot do emulador..."
+              sleep 3
+            done
+            echo "✅ Emulador Android está pronto!"
+            
+            # Informações do device
+            echo "=== Informações do Device ==="
+            adb shell getprop ro.build.version.release
+            adb shell getprop ro.product.model
+            
+            echo "======================================"
+            echo "Executando Testes Robot Framework"
+            echo "======================================"
+            
+            # Criar diretório de resultados
+            mkdir -p results
+            
+            # Executar testes
+            robot \
+              --outputdir results \
+              --loglevel DEBUG \
+              --consolewidth 120 \
+              --variable PLATFORM_NAME:Android \
+              --variable DEVICE_NAME:emulator-5554 \
+              test/
+            
             TEST_RESULT=$?
-
-            echo "Log do Appium:"
-            cat appium.log
-
+            
+            echo "======================================"
+            echo "Finalizando"
+            echo "======================================"
+            
+            # Mostrar log do Appium em caso de falha
+            if [ $TEST_RESULT -ne 0 ]; then
+              echo "❌ Testes falharam! Mostrando últimas 100 linhas do log:"
+              tail -n 100 appium.log
+            else
+              echo "✅ Testes concluídos com sucesso!"
+            fi
+            
+            # Matar processo do Appium
+            kill $APPIUM_PID 2>/dev/null || true
+            
             exit $TEST_RESULT
 
       - name: Upload Logs do Appium
@@ -97,6 +178,7 @@ jobs:
         with:
           name: appium-logs
           path: appium.log
+          retention-days: 7
 
       - name: Upload Relatórios Robot Framework
         uses: actions/upload-artifact@v4
@@ -107,4 +189,21 @@ jobs:
             results/log.html
             results/report.html
             results/output.xml
-            results/screenshots/
+          retention-days: 30
+
+      - name: Upload Screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: results/screenshots/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Publicar Resultado dos Testes
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: results/output.xml
+          check_name: "Robot Framework Test Results"
+          comment_mode: off
