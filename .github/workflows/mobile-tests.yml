@@ -14,7 +14,7 @@ jobs:
       - name: Checkout do projeto
         uses: actions/checkout@v4
 
-      - name: Instalar Java (necessário para Android SDK)
+      - name: Instalar Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -39,16 +39,6 @@ jobs:
           npm install -g appium@2.11.2
           appium driver install uiautomator2@2.36.0
 
-      - name: Iniciar Appium em background
-        run: |
-          appium --base-path /wd/hub --relaxed-security > appium.log 2>&1 &
-          echo $! > appium.pid
-          
-      - name: Aguardar Appium iniciar
-        run: |
-          timeout 60s bash -c 'until curl -s http://127.0.0.1:4723/wd/hub/status > /dev/null; do echo "Aguardando Appium..."; sleep 2; done'
-          echo "✅ Appium está pronto!"
-
       - name: Configurar e Executar Testes no Emulador
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -59,6 +49,24 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
+            echo "🚀 Iniciando Appium em background..."
+            appium --base-path /wd/hub --relaxed-security > appium.log 2>&1 &
+            APPIUM_PID=$!
+            echo "Appium PID: $APPIUM_PID"
+            
+            echo "⏳ Aguardando Appium iniciar (máximo 60s)..."
+            timeout 60s bash -c 'until curl -s http://127.0.0.1:4723/wd/hub/status > /dev/null 2>&1; do echo -n "."; sleep 2; done' || {
+              echo "❌ Appium não iniciou a tempo!"
+              cat appium.log
+              exit 1
+            }
+            echo ""
+            echo "✅ Appium está pronto!"
+            
+            echo "📱 Status do Appium:"
+            curl -s http://127.0.0.1:4723/wd/hub/status | head -20
+            
+            echo ""
             echo "🔌 Verificando dispositivo ADB..."
             adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
             adb devices
@@ -67,19 +75,23 @@ jobs:
             adb shell getprop ro.build.version.release
             adb shell getprop ro.product.cpu.abi
             
+            echo ""
             echo "🤖 Executando testes Robot Framework..."
-            robot --outputdir results test/
+            robot --outputdir results test/ || TEST_EXIT_CODE=$?
             
-      - name: Parar Appium
-        if: always()
-        run: |
-          if [ -f appium.pid ]; then
-            kill $(cat appium.pid) || true
-          fi
+            echo ""
+            echo "📋 Últimas linhas do log do Appium:"
+            tail -50 appium.log
+            
+            # Parar Appium
+            kill $APPIUM_PID 2>/dev/null || true
+            
+            # Retornar código de saída dos testes
+            exit ${TEST_EXIT_CODE:-0}
 
       - name: Upload Logs do Appium
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: appium-logs
           path: appium.log
@@ -93,3 +105,4 @@ jobs:
             results/log.html
             results/report.html
             results/output.xml
+            results/screenshots/
