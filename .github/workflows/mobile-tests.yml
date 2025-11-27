@@ -41,6 +41,8 @@ jobs:
 
       - name: Configurar e Executar Testes no Emulador
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          SHELL: /bin/bash
         with:
           api-level: 30
           target: google_apis
@@ -49,45 +51,45 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
-            echo "🚀 Iniciando Appium em background..."
+            #!/bin/bash
+            set -x
+            echo "Iniciando Appium em background..."
             appium --base-path /wd/hub --relaxed-security > appium.log 2>&1 &
             APPIUM_PID=$!
             echo "Appium PID: $APPIUM_PID"
             
-            echo "⏳ Aguardando Appium iniciar (máximo 60s)..."
-            timeout 60s bash -c 'until curl -s http://127.0.0.1:4723/wd/hub/status > /dev/null 2>&1; do echo -n "."; sleep 2; done' || {
-              echo "❌ Appium não iniciou a tempo!"
-              cat appium.log
-              exit 1
-            }
-            echo ""
-            echo "✅ Appium está pronto!"
+            echo "Aguardando Appium iniciar..."
+            sleep 10
             
-            echo "📱 Status do Appium:"
-            curl -s http://127.0.0.1:4723/wd/hub/status | head -20
+            COUNTER=0
+            while ! curl -s http://127.0.0.1:4723/wd/hub/status > /dev/null 2>&1
+            do
+              echo "Tentativa $COUNTER - Appium ainda nao esta pronto..."
+              sleep 3
+              COUNTER=$((COUNTER + 1))
+              if [ $COUNTER -gt 20 ]
+              then
+                echo "ERRO: Appium nao iniciou a tempo!"
+                cat appium.log
+                exit 1
+              fi
+            done
             
-            echo ""
-            echo "🔌 Verificando dispositivo ADB..."
-            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
+            echo "Appium esta pronto!"
+            curl -s http://127.0.0.1:4723/wd/hub/status
+            
+            echo "Verificando dispositivo..."
+            adb wait-for-device
             adb devices
             
-            echo "📱 Informações do dispositivo:"
-            adb shell getprop ro.build.version.release
-            adb shell getprop ro.product.cpu.abi
+            echo "Executando testes..."
+            robot --outputdir results test/
+            TEST_RESULT=$?
             
-            echo ""
-            echo "🤖 Executando testes Robot Framework..."
-            robot --outputdir results test/ || TEST_EXIT_CODE=$?
+            echo "Log do Appium:"
+            cat appium.log
             
-            echo ""
-            echo "📋 Últimas linhas do log do Appium:"
-            tail -50 appium.log
-            
-            # Parar Appium
-            kill $APPIUM_PID 2>/dev/null || true
-            
-            # Retornar código de saída dos testes
-            exit ${TEST_EXIT_CODE:-0}
+            exit $TEST_RESULT
 
       - name: Upload Logs do Appium
         uses: actions/upload-artifact@v4
