@@ -5,12 +5,17 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch:  # Permite execução manual
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Timeout global para o job
+    timeout-minutes: 45
     
     steps:
       - name: Checkout do projeto
@@ -40,24 +45,24 @@ jobs:
           java -version
           node --version
           npm --version
+          echo "Android SDK: $ANDROID_HOME"
 
       - name: Instalar dependências Python
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip list  # Lista pacotes instalados para debug
 
       - name: Instalar Appium 2 + UiAutomator2
         run: |
           npm install -g appium@2.11.2
           appium driver install uiautomator2@2.36.0
-          appium driver list  # Verifica drivers instalados
+          appium driver list
 
       - name: Verificar APK existe
         run: |
           if [ ! -f "app/DiarioMobile.apk" ]; then
             echo "❌ ERRO: APK não encontrado em app/DiarioMobile.apk"
-            echo "Arquivos no diretório app/:"
+            echo "Conteúdo do diretório:"
             ls -la app/ || echo "Diretório app/ não existe!"
             exit 1
           else
@@ -65,77 +70,117 @@ jobs:
             ls -lh app/DiarioMobile.apk
           fi
 
+      - name: Habilitar KVM (performance do emulador)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Configurar e Executar Testes no Emulador
         uses: reactivecircus/android-emulator-runner@v2
         env:
           SHELL: /bin/bash
         with:
-          api-level: 30
-          target: google_apis
+          api-level: 29
+          target: default
           arch: x86_64
+          profile: Nexus 6
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x1920
           disable-animations: true
+          disk-size: 4096M
+          heap-size: 512M
+          ram-size: 4096M
           script: |
-            #!/bin/bash
-            set -e  # Para em caso de erro
-            set -x  # Debug mode
+            set +e  # Não parar em erros para capturar logs
+            
+            echo "======================================"
+            echo "Verificando ADB e Dispositivo"
+            echo "======================================"
+            
+            # Reiniciar ADB server
+            adb kill-server
+            sleep 2
+            adb start-server
+            sleep 2
+            
+            # Aguardar device
+            adb wait-for-device
+            
+            # Verificar dispositivos
+            echo "Dispositivos conectados:"
+            adb devices -l
+            
+            # Aguardar boot completo
+            echo "Aguardando boot do emulador..."
+            BOOT_COMPLETED=0
+            for i in {1..60}; do
+              BOOT_STATUS=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')
+              if [ "$BOOT_STATUS" == "1" ]; then
+                echo "✅ Boot completo!"
+                BOOT_COMPLETED=1
+                break
+              fi
+              echo "Tentativa $i/60 - Boot status: $BOOT_STATUS"
+              sleep 3
+            done
+            
+            if [ $BOOT_COMPLETED -eq 0 ]; then
+              echo "❌ ERRO: Emulador não completou o boot!"
+              exit 1
+            fi
+            
+            # Informações do device
+            echo "=== Device Info ==="
+            echo "Android Version: $(adb shell getprop ro.build.version.release)"
+            echo "Device Model: $(adb shell getprop ro.product.model)"
+            echo "Device ID: $(adb shell getprop ro.serialno)"
+            
+            # Desabilitar animações
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
             
             echo "======================================"
             echo "Iniciando Appium Server"
             echo "======================================"
             
-            # Iniciar Appium em background
-            appium --base-path /wd/hub --relaxed-security --log appium.log --log-level debug > /dev/null 2>&1 &
+            # Criar diretório de logs
+            mkdir -p logs
+            
+            # Iniciar Appium
+            appium --base-path /wd/hub \
+                   --relaxed-security \
+                   --log logs/appium.log \
+                   --log-level debug \
+                   --allow-insecure chromedriver_autodownload > /dev/null 2>&1 &
+            
             APPIUM_PID=$!
             echo "Appium PID: $APPIUM_PID"
             
-            # Aguardar Appium iniciar (com timeout)
+            # Aguardar Appium iniciar
             echo "Aguardando Appium iniciar..."
-            COUNTER=0
-            MAX_ATTEMPTS=30
-            
-            while [ $COUNTER -lt $MAX_ATTEMPTS ]; do
+            APPIUM_READY=0
+            for i in {1..30}; do
               if curl -s http://127.0.0.1:4723/wd/hub/status > /dev/null 2>&1; then
-                echo "✅ Appium iniciou com sucesso!"
-                curl -s http://127.0.0.1:4723/wd/hub/status | python -m json.tool
+                echo "✅ Appium iniciou!"
+                APPIUM_READY=1
                 break
               fi
-              
-              echo "Tentativa $((COUNTER + 1))/$MAX_ATTEMPTS - Aguardando Appium..."
+              echo "Tentativa $i/30..."
               sleep 2
-              COUNTER=$((COUNTER + 1))
-              
-              if [ $COUNTER -eq $MAX_ATTEMPTS ]; then
-                echo "❌ ERRO: Appium não iniciou após $MAX_ATTEMPTS tentativas!"
-                echo "=== Log do Appium ==="
-                cat appium.log 2>/dev/null || echo "Log não disponível"
-                exit 1
-              fi
             done
             
-            echo "======================================"
-            echo "Verificando Emulador Android"
-            echo "======================================"
+            if [ $APPIUM_READY -eq 0 ]; then
+              echo "❌ ERRO: Appium não iniciou!"
+              echo "=== Log do Appium ==="
+              cat logs/appium.log 2>/dev/null || echo "Log não disponível"
+              exit 1
+            fi
             
-            # Aguardar device estar pronto
-            adb wait-for-device
-            
-            # Verificar dispositivos conectados
-            echo "Dispositivos conectados:"
-            adb devices -l
-            
-            # Verificar se device está realmente pronto
-            while [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; do
-              echo "Aguardando boot do emulador..."
-              sleep 3
-            done
-            echo "✅ Emulador Android está pronto!"
-            
-            # Informações do device
-            echo "=== Informações do Device ==="
-            adb shell getprop ro.build.version.release
-            adb shell getprop ro.product.model
+            # Status do Appium
+            echo "=== Appium Status ==="
+            curl -s http://127.0.0.1:4723/wd/hub/status | python3 -m json.tool || echo "Não foi possível obter status"
             
             echo "======================================"
             echo "Executando Testes Robot Framework"
@@ -151,34 +196,47 @@ jobs:
               --consolewidth 120 \
               --variable PLATFORM_NAME:Android \
               --variable DEVICE_NAME:emulator-5554 \
-              test/
-            
-            TEST_RESULT=$?
+              --variable APPIUM_SERVER:http://127.0.0.1:4723 \
+              test/ || TEST_FAILED=1
             
             echo "======================================"
             echo "Finalizando"
             echo "======================================"
             
-            # Mostrar log do Appium em caso de falha
-            if [ $TEST_RESULT -ne 0 ]; then
-              echo "❌ Testes falharam! Mostrando últimas 100 linhas do log:"
-              tail -n 100 appium.log
-            else
-              echo "✅ Testes concluídos com sucesso!"
+            # Copiar logs
+            cp logs/appium.log . 2>/dev/null || echo "Log do Appium não encontrado"
+            
+            # Listar arquivos gerados
+            echo "=== Arquivos gerados ==="
+            ls -lh results/ 2>/dev/null || echo "Nenhum resultado gerado"
+            ls -lh *.log 2>/dev/null || echo "Nenhum log gerado"
+            
+            # Mostrar últimas linhas do log em caso de falha
+            if [ ! -z "$TEST_FAILED" ]; then
+              echo "❌ Testes falharam! Últimas 100 linhas do Appium:"
+              tail -n 100 appium.log 2>/dev/null || echo "Log não disponível"
             fi
             
-            # Matar processo do Appium
+            # Matar Appium
             kill $APPIUM_PID 2>/dev/null || true
             
-            exit $TEST_RESULT
+            # Retornar código de saída
+            if [ ! -z "$TEST_FAILED" ]; then
+              exit 1
+            fi
+            
+            exit 0
 
       - name: Upload Logs do Appium
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: appium-logs
-          path: appium.log
+          path: |
+            appium.log
+            logs/
           retention-days: 7
+          if-no-files-found: warn
 
       - name: Upload Relatórios Robot Framework
         uses: actions/upload-artifact@v4
@@ -190,6 +248,7 @@ jobs:
             results/report.html
             results/output.xml
           retention-days: 30
+          if-no-files-found: warn
 
       - name: Upload Screenshots
         uses: actions/upload-artifact@v4
@@ -201,9 +260,29 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publicar Resultado dos Testes
-        if: always()
+        if: always() && hashFiles('results/output.xml') != ''
         uses: EnricoMi/publish-unit-test-result-action@v2
+        continue-on-error: true
         with:
           files: results/output.xml
           check_name: "Robot Framework Test Results"
           comment_mode: off
+
+      - name: Resumo dos Testes
+        if: always()
+        run: |
+          echo "## 📊 Resultado dos Testes" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "results/output.xml" ]; then
+            echo "✅ Testes executados com sucesso!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📄 Verifique os artifacts para ver os relatórios completos:" >> $GITHUB_STEP_SUMMARY
+            echo "- robot-reports" >> $GITHUB_STEP_SUMMARY
+            echo "- screenshots" >> $GITHUB_STEP_SUMMARY
+            echo "- appium-logs" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Testes não foram executados ou falharam antes de gerar resultados" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🔍 Verifique os logs nos artifacts:" >> $GITHUB_STEP_SUMMARY
+            echo "- appium-logs" >> $GITHUB_STEP_SUMMARY
+          fi

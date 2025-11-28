@@ -3,7 +3,7 @@ Library     AppiumLibrary
 Library     Collections
 Library     OperatingSystem
 Resource    screens/login.robot
-Resource    screens/turmas.robot
+Resource    screens/dClasse.robot
 
 *** Keywords ***
 Iniciar sessão
@@ -11,7 +11,7 @@ Iniciar sessão
     ...                 platformName=Android
     ...                 deviceName=Android Emulator
     ...                 automationName=UIAutomator2
-    ...                 app=${EXECDIR}/app/DiarioMobile.apk
+    ...                 app=${EXECDIR}/app/app-release.apk
     ...                 udid=emulator-5554
     ...                 autoGrantPermissions=true
     ...                 uiautomator2ServerInstallTimeout=60000

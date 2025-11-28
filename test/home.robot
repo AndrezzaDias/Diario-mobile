@@ -3,30 +3,25 @@ Resource    ../resources/startup.resource
 Library    XML
 
 Test Setup    Iniciar sessão
-***Variables***
-${escola}                    COLEGIO ESTADUAL PRESTIGIO REAL    
+***Variables***   
 ${selecionando_escola}       ESCOLA TESTE 
 ${periodo_av}                1º Bimestre (20/01/2025 até 29/04/2025 )
+${data}                      2025-11-03  
+
 
 *** Test Cases ***
 Deve logar com sucesso
-    Logando com sucesso   
-    Validando tela de login    ${escola} 
-    Selecione a escola         ${selecionando_escola} 
-
-
-   
-Deve acessar a tela minhas turmas: Frequencia
+    Logando com sucesso    
+    filtrando escola          
+Deve acessar a tela Diário de Classe: Frequencia
     Logando com sucesso
-    Validando tela de login        ${escola} 
-    Acessando a tela minhas turmas 
-    Acessando Frequencia
-    Alterar frequencia
+    Acessando a tela Diario de Classe
+    Acessando Frequencia    ${data} 
+    Alterar frequencia 
     
 Deve acessar a tela minhas turmas: Avaliação 
-    Logando com sucesso
-    Validando tela de login    ${escola} 
-    Acessando a tela minhas turmas
+    Logando com sucesso 
+    Acessando a tela Diario de Classe
     Acessando Avaliação        ${periodo_av}            
     
   
