@@ -12,17 +12,22 @@ ${data}                      2025-11-03
 *** Test Cases ***
 Deve logar com sucesso
     Logando com sucesso    
-    filtrando escola          
+            
 Deve acessar a tela Diário de Classe: Frequencia
     Logando com sucesso
     Acessando a tela Diario de Classe
-    Acessando Frequencia    ${data} 
+    Acessando Frequencia    
     Alterar frequencia 
     
 Deve acessar a tela minhas turmas: Avaliação 
     Logando com sucesso 
     Acessando a tela Diario de Classe
-    Acessando Avaliação        ${periodo_av}            
+    Acessando Avaliação        ${periodo_av}     
+
+Deve acessar Planos de Aula 
+    Logando com sucesso
+    Acessando Planos de Aula  
+    Novo Plano de Aula         
     
   
    

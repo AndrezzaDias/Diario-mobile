@@ -8,22 +8,14 @@ Library    XML
 *** Keywords ***
 Acessando a tela Diario de Classe
     Sleep    5
-    Wait Until Element Is Visible        xpath=//android.widget.TextView[@text="Diário de Classe"]    5    
+    Wait Until Element Is Visible        xpath=//android.widget.TextView[@text="Diário de Classe"]   5    
     Click Element                        xpath=//android.widget.TextView[@text="Diário de Classe"]
 Acessando Frequencia 
     #Acessando a tela de frequencia
-
-
-
     Sleep    5
     Wait Until Element Is Visible    xpath=//android.widget.TextView[@text="󰃰"]    5  
     Click Element                    xpath=//android.widget.TextView[@text="󰃰"]
-    Wait Until Element Is Visible    xpath=//android.widget.TextView[@text="Selecione a Data"]
-    
-    [Arguments]    ${data}
-    Wait Until Element Is Visible    xpath=//android.widget.TextView[@resource-id="undefined.day_${data}.text"]
-    Click Element                    xpath=//android.widget.TextView[@resource-id="undefined.day_${data}.text"]
-    
+       
 Alterar frequencia
     #Alterando frequencia de Aluno / Ausente 
     Sleep    5
