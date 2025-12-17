@@ -1,58 +1,65 @@
-# Projeto de Automação de Testes - Diário Mobile
+# Descrição do Projeto: Diário Mobile Automation
 
-Este projeto contém testes automatizados para o aplicativo Android "Diário Mobile", utilizando Robot Framework e Appium.
+O projeto **Diário Mobile** é uma solução de automação de testes para o aplicativo Android "Diário Mobile". O foco é garantir a qualidade do software através de testes de interface (UI) automatizados, integrados a um pipeline de Integração Contínua (CI).
 
-## 🚀 Tecnologias Utilizadas
+A arquitetura utiliza o **Robot Framework**, que permite a criação de testes legíveis baseados em palavras-chave (Keyword-Driven), em conjunto com o **Appium**, que gerencia a interação com o sistema operacional Android.
 
-- **[Python](https://www.python.org/)**: Linguagem de programação base.
-- **[Robot Framework](https://robotframework.org/)**: Framework de automação de testes.
-- **[Appium](http://appium.io/)**: Ferramenta de automação para aplicativos móveis.
-- **[AppiumLibrary](https://robotframework.org/AppiumLibrary/)**: Biblioteca de integração entre Robot Framework e Appium.
+### 🛠 Tecnologias e Ferramentas
 
-## 📋 Pré-requisitos
+*   **Linguagem Base:** Python 3.10
+*   **Framework de Testes:** Robot Framework
+*   **Motor de Automação:** Appium Server 2.x com driver UiAutomator2
+*   **Integração Contínua (CI):** GitHub Actions
+*   **Ambiente de Execução:** Emuladores Android (via KVM em Linux)
 
-Antes de começar, você precisará ter instalado em sua máquina:
+## Plano de Teste
 
-- Node.js e npm (para instalar o Appium)
-- Java JDK (necessário para o Android SDK)
-- Android SDK com um emulador configurado ou um dispositivo físico conectado.
-- Appium Server
+Este plano descreve a estratégia de validação automatizada configurada no repositório.
 
-## ⚙️ Instalação do Projeto
+### 1. Escopo e Objetivo
+Validar as funcionalidades do aplicativo `DiarioMobile.apk` em um ambiente controlado, garantindo que novas alterações no código (`push` ou `pull_request` na branch `main`) não quebrem funcionalidades existentes (Testes de Regressão).
 
-1.  **Clone o repositório:**
-    ```bash
-    git clone https://github.com/AndrezzaDias/Diario-mobile.git
-    cd Diario-mobile
-    ```
+### 2. Ambiente de Teste (CI/CD)
+O ambiente é provisionado dinamicamente no GitHub Actions com as seguintes especificações:
 
-2.  **Crie e ative um ambiente virtual (recomendado):**
-    ```bash
-    python -m venv venv
-    # Windows
-    .\venv\Scripts\activate
-    # Linux/macOS
-    source venv/bin/activate
-    ```
+*   **OS do Runner:** Ubuntu Latest
+*   **Java:** JDK 17 (Requisito para Android SDK)
+*   **Node.js:** Versão 20.x (Para execução do Appium)
+*   **Python:** Versão 3.10 (Para Robot Framework e bibliotecas)
+*   **Emulador Android:**
+    *   **API Level:** 29 (Android 10)
+    *   **Arquitetura:** x86_64 (com aceleração KVM)
+    *   **Perfil:** Nexus 6
+    *   **Resolução:** 1080x1920
 
-3.  **Instale as dependências do Python:**
-    (É uma boa prática criar um arquivo `requirements.txt` com `robotframework` e `robotframework-appiumlibrary`)
-    ```bash
-    pip install robotframework robotframework-appiumlibrary
-    ```
+### 3. Estratégia de Execução
+O fluxo de execução automatizada segue as etapas definidas no workflow `Mobile Automation CI`:
 
-4.  **Coloque o APK na pasta `app`:**
-    Certifique-se de que o arquivo `.apk` do Diário Mobile esteja dentro da pasta `app/`.
+1.  **Pré-condições:**
+    *   O código é baixado (Checkout).
+    *   O arquivo `app/DiarioMobile.apk` deve existir no repositório.
+    *   As dependências do Python (`requirements.txt`) e drivers do Appium (`uiautomator2`) são instalados.
 
-## ▶️ Executando os Testes
+2.  **Inicialização:**
+    *   O emulador Android é iniciado e o script aguarda o sinal de `boot_completed`.
+    *   Animações do sistema Android são desabilitadas para evitar instabilidade nos testes (flakiness).
+    *   O servidor Appium é iniciado em background na porta 4723.
 
-1.  **Inicie o servidor do Appium** em um terminal separado:
-    ```bash
-    appium
-    ```
+3.  **Execução dos Testes:**
+    *   O comando `robot` é disparado apontando para a pasta `test/`.
+    *   **Variáveis de Execução:**
+        *   `PLATFORM_NAME`: Android
+        *   `DEVICE_NAME`: emulator-5554
+        *   `APPIUM_SERVER`: http://127.0.0.1:4723
 
-2.  **Execute os testes do Robot Framework:**
-    ```bash
-    robot -d results tests/
-    ```
-    Os resultados serão gerados na pasta `results`. Abra o arquivo `report.html` para ver um relatório detalhado da execução.
+4.  **Pós-Execução (Teardown):**
+    *   O servidor Appium e o emulador são encerrados.
+    *   Logs e relatórios são coletados independentemente do sucesso ou falha dos testes.
+
+### 4. Artefatos e Relatórios (Evidências)
+Ao final da execução, os seguintes artefatos são gerados e armazenados pelo GitHub Actions:
+
+*   **Relatórios do Robot:** `log.html`, `report.html`, `output.xml` (Retenção: 30 dias).
+*   **Logs Técnicos:** `appium.log` (Logs do servidor Appium para debug).
+*   **Screenshots:** Capturas de tela geradas durante os testes (pasta `results/screenshots/`).
+*   **Resumo:** Um comentário é publicado no Pull Request ou no resumo do Job com o status da execução.
