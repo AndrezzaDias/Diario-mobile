@@ -1,34 +1,35 @@
 *** Settings ***
+Documentation        Testes da tela Home
 Resource    ../resources/startup.resource
-Library    XML
+Resource    ../screens/login.robot
+Resource    ../screens/DiariodeClasse.robot
+Resource    ../screens/PlanosDeAula.robot
 
-Test Setup    Iniciar sessão
-***Variables***   
-${selecionando_escola}       ESCOLA TESTE 
-${periodo_av}                1º Bimestre (20/01/2025 até 29/04/2025 )
-${data}                      2025-11-03  
+Test Setup           Iniciar sessão
+Test Teardown        Finalizar sessão
 
 
 *** Test Cases ***
 Deve logar com sucesso
-    Logando com sucesso    
+    [Tags]    smoke    login
+    Logando com sucesso
+    Validando elementos home
             
 Deve acessar a tela Diário de Classe: Frequencia
+    [Tags]    diario    frequencia
     Logando com sucesso
     Acessando a tela Diario de Classe
     Acessando Frequencia    
-    Alterar frequencia 
+    Alterar frequencia
     
-Deve acessar a tela minhas turmas: Avaliação 
+Deve acessar a tela minhas turmas: Avaliação
+    [Tags]    diario    avaliacao
     Logando com sucesso 
     Acessando a tela Diario de Classe
-    Acessando Avaliação        ${periodo_av}     
+  
 
-Deve acessar Planos de Aula 
+Deve acessar Planos de Aula
+    [Tags]    planos
     Logando com sucesso
     Acessando Planos de Aula  
-    Novo Plano de Aula         
-    
-  
-   
-      
+    Novo Plano de Aula

@@ -1,46 +1,31 @@
 *** Settings ***
 Documentation        Acessando a tela minhas turmas 
 Library              AppiumLibrary
+Resource            ../resources/startup.resource
 Library    XML
 
-*** Variables ***
+
 
 *** Keywords ***
 Acessando a tela Diario de Classe
-    Sleep    5
-    Wait Until Element Is Visible        xpath=//android.widget.TextView[@text="Diário de Classe"]   5    
-    Click Element                        xpath=//android.widget.TextView[@text="Diário de Classe"]
+    Wait Until Element Is Visible        ${TXT_DIARIO_CLASSE}        ${TIMEOUT_CURTO}    
+    Click Element                        ${TXT_DIARIO_CLASSE}    
 Acessando Frequencia 
     #Acessando a tela de frequencia
-    Sleep    5
-    Wait Until Element Is Visible    xpath=//android.widget.TextView[@text="󰃰"]    5  
-    Click Element                    xpath=//android.widget.TextView[@text="󰃰"]
+    ${TIMEOUT_CURTO}
+    Wait Until Element Is Visible    ${BTN_FREQUENCIA}      5  
+    Click Element                    ${BTN_FREQUENCIA}  
        
 Alterar frequencia
     #Alterando frequencia de Aluno / Ausente 
-    Sleep    5
-    Click Element                    xpath=(//android.widget.TextView[@text="Alterar"])[1]
-    Wait Until Element Is Visible    xpath=//android.widget.TextView[contains(@text, "Alterar frequência")]
-    Click Element                    xpath=//android.widget.Switch
-    Input Text                       xpath=//android.widget.EditText[@text="Digite a justificativa"]        Não compareceu a aula 
-    Click Element                    xpath=//android.view.ViewGroup[@content-desc="Salvar"]
+    ${TIMEOUT_CURTO}
+    Click Element                    ${BTN_ALTERAR_FREQUENCIA} 
+    Wait Until Element Is Visible    ${TXT_ALTERAR_FREQ_MODAL} 
+    Click Element                    ${SWITCH_FREQUENCIA} 
+    Input Text                       ${CAMPO_JUSTIFICATIVA}            Não compareceu a aula 
+    Click Element                    ${BTN_SALVAR}   
 
-Acessando Avaliação 
-    #Acessando tela de avaliação
-    Wait Until Element Is Visible     xpath=//android.view.ViewGroup[@content-desc="Avaliações"]
-    Click Element                     xpath=//android.view.ViewGroup[@content-desc="Avaliações"]  
 
-    #Selecionando Período
-    [Arguments]        ${Periodo}
-
-    Wait Until Element Is Visible     xpath=//android.view.ViewGroup[@content-desc="Toque para Selecionar"]
-    Click Element                     xpath=//android.view.ViewGroup[@content-desc="Toque para Selecionar"]
-
-    Wait Until Element Is Visible     xpath=//android.widget.TextView[@text="${periodo}"]  
-    Click Element                     xpath=//android.widget.TextView[@text="${periodo}"]   
-
-    Wait Until Element Is Visible     xpath=//android.widget.TextView[@text="${periodo}"]  
-    
     
 
         
